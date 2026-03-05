@@ -11,10 +11,8 @@ const { ATMmodel } = require("../models/ATMCard.model")
 class AuthService {
 
     static async loginUser(body) {
-
         const { email, password } = body
 
-        // CHANGE 1: normalize email to lowercase before lookup
         const check_exist = await UserModel.findOne({ email: email.toLowerCase() })
         if (!check_exist) {
             throw new ApiError(400, "No Account Found")
@@ -35,10 +33,8 @@ class AuthService {
 
 
     static async registerUser(body) {
-
         const { name, email, password, ac_type } = body
 
-        // CHANGE 2: normalize email to lowercase before saving
         const normalizedEmail = email.toLowerCase()
 
         const check_exist = await UserModel.findOne({ email: normalizedEmail })
@@ -46,13 +42,11 @@ class AuthService {
             throw new ApiError(400, "Email Already Exist")
         }
 
-        // CHANGE 3: hash password before saving (was plaintext before)
-        const hashedPassword = await bcryptjs.hash(password, 10)
-
+        // ✅ Removed manual hashing - model pre-save hook handles it
         const user = await UserModel.create({
             name,
-            email: normalizedEmail,   // was: email (not normalized)
-            password: hashedPassword, // was: password (plaintext)
+            email: normalizedEmail,
+            password: password, // plain text - will be hashed by model
             ac_type
         })
 
@@ -82,7 +76,6 @@ class AuthService {
 
     static async profileUser(user) {
 
-        // CHANGE 4: moved user check to TOP — was at bottom, would crash before reaching it
         const userd = await UserModel.findById(user)
             .select("name email ac_type createdAt -_id")
         if (!userd) {
@@ -91,14 +84,12 @@ class AuthService {
 
         const profile_obj = {}
 
-        // CHANGE 5: run all DB calls in parallel with Promise.all (faster)
         const [account, fixDeposits, atms] = await Promise.all([
             AccountModel.find({ user }).select("_id amount"),
             FixDepositModel.find({ user, isClaimed: false }),
             ATMmodel.find({ user }).select("_id card_type")
         ])
 
-        // CHANGE 6: was !account which is always false since .find() returns [] not null
         if (account.length === 0) {
             const ac = await AccountModel.create({
                 user,
@@ -122,7 +113,6 @@ class AuthService {
             profile_obj['account_no'] = account
         }
 
-        // CHANGE 7: removed unnecessary Promise.resolve() — reduce is synchronous
         profile_obj['fd_amount'] = fixDeposits.length > 0
             ? fixDeposits.reduce((pre, cur) => pre + cur.amount, 0)
             : 0
