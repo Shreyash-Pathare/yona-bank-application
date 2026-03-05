@@ -50,7 +50,7 @@ The application follows a **Modular Layered Architecture** (Controller-Service-M
 
 * **Database:** MongoDB (NoSQL)
 * **Backend:** Node.js & Express.js
-* **Frontend:** React.js
+* **Frontend:** Next.js
 * **State Management:** Redux Toolkit / Context API
 * **Security:** JWT, bcrypt, Dotenv
 
