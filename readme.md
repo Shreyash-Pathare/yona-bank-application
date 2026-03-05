@@ -1,4 +1,4 @@
-# 💳 Yona (MERN Digital Banking System)
+# 💳 Yona (Digital Banking System)
 
 > **A high-performance, full-stack digital banking platform.** Inspired by modern banking ecosystems like YONO SBI, this system simulates complex financial operations with a focus on security, atomicity, and modular architecture.
 
