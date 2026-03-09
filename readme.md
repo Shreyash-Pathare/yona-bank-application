@@ -117,7 +117,7 @@ Yona-banking-application/
 
 1. Clone the Repository
 ```env
-git clone https://github.com/Shreyash-Pathare/Yona-Banking-Application.git
+git https://github.com/Shreyash-Pathare/yona-bank-application.git
 ```
 2. Backend Configuration
 ```env
