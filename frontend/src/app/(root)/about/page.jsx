@@ -97,15 +97,6 @@ const AboutPage = () => {
               </p>
             </div>
 
-            <div className="p-6 rounded-xl bg-purple-50 border border-purple-100">
-              <h3 className="text-xl font-semibold text-purple-700 mb-3">
-                Fund Transfer
-              </h3>
-              <p className="text-gray-600 leading-6">
-                Transfer funds between accounts through a convenient digital
-                banking interface.
-              </p>
-            </div>
 
             <div className="p-6 rounded-xl bg-orange-50 border border-orange-100">
               <h3 className="text-xl font-semibold text-orange-700 mb-3">
