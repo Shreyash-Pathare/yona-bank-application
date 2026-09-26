@@ -1,71 +1,109 @@
 const { ATMmodel } = require("../models/ATMCard.model")
 const ApiError = require("../utils/ApiError")
 
-// In-memory store for PIN attempts (use Redis in production)
-const pinAttempts = {}
-
 const MAX_ATTEMPTS = 3
 const LOCK_DURATION_MS = 15 * 60 * 1000 // 15 minutes
 
+// Temporary storage for failed PIN attempts
+// In production, use Redis for multiple server instances.
+const pinAttempts = {}
+
+
 /**
- * Middleware to block requests if a card is blocked
- * or if too many wrong PIN attempts have been made
+ * Check whether the card is allowed to attempt a PIN.
  */
 const checkCardBlocked = async (req, res, next) => {
     try {
         const cardId = req.params.id
 
-        // Check DB block flag
+        // Check if card exists
         const card = await ATMmodel.findById(cardId)
-        if (!card) return next(new ApiError(404, "Card Not Found"))
 
-        if (card.is_blocked) {
-            return next(new ApiError(403, "This card has been permanently blocked. Please contact support."))
+        if (!card) {
+            return next(new ApiError(404, "Card Not Found"))
         }
 
-        // Check in-memory attempt lockout
+        // Check permanent block
+        if (card.is_blocked) {
+            return next(
+                new ApiError(
+                    403,
+                    "Card is permanently blocked. Please contact support."
+                )
+            )
+        }
+
+        // Check temporary PIN lock
         const attemptData = pinAttempts[cardId]
-        if (attemptData) {
-            const timeSinceLock = Date.now() - attemptData.lockedAt
-            if (attemptData.locked && timeSinceLock < LOCK_DURATION_MS) {
-                const remaining = Math.ceil((LOCK_DURATION_MS - timeSinceLock) / 60000)
-                return next(new ApiError(429, `Card temporarily locked. Try again in ${remaining} minutes.`))
-            } else if (attemptData.locked) {
-                // Lock expired, reset
-                pinAttempts[cardId] = { count: 0, locked: false }
+
+        if (attemptData?.locked) {
+
+            const elapsedTime = Date.now() - attemptData.lockedAt
+
+            // Still locked
+            if (elapsedTime < LOCK_DURATION_MS) {
+
+                const remainingMinutes = Math.ceil(
+                    (LOCK_DURATION_MS - elapsedTime) / 60000
+                )
+
+                return next(
+                    new ApiError(
+                        429,
+                        `Too many incorrect PIN attempts. Try again in ${remainingMinutes} minutes.`
+                    )
+                )
             }
+
+            // Lock expired
+            delete pinAttempts[cardId]
         }
 
         next()
-    } catch (err) {
-        next(err)
+
+    } catch (error) {
+        next(error)
     }
 }
 
-/**
- * Call this after a failed PIN attempt
- */
-const recordFailedPinAttempt = async (cardId) => {
+
+
+const recordFailedPinAttempt = (cardId) => {
+
+   
     if (!pinAttempts[cardId]) {
-        pinAttempts[cardId] = { count: 0, locked: false }
+        pinAttempts[cardId] = {
+            count: 0,
+            locked: false,
+            lockedAt: null
+        }
     }
 
-    pinAttempts[cardId].count += 1
+    const attemptData = pinAttempts[cardId]
 
-    if (pinAttempts[cardId].count >= MAX_ATTEMPTS) {
-        pinAttempts[cardId].locked = true
-        pinAttempts[cardId].lockedAt = Date.now()
+    attemptData.count += 1
 
-        // FIX: After 3 failed attempts, permanently block card in DB
-        await ATMmodel.findByIdAndUpdate(cardId, { is_blocked: true })
+  
+    if (attemptData.count >= MAX_ATTEMPTS) {
+
+        attemptData.locked = true
+        attemptData.lockedAt = Date.now()
+
+        console.log(
+            `Card ${cardId} locked for 15 minutes`
+        )
     }
 }
 
-/**
- * Call this after a successful PIN
- */
+
+
 const resetPinAttempts = (cardId) => {
     delete pinAttempts[cardId]
 }
 
-module.exports = { checkCardBlocked, recordFailedPinAttempt, resetPinAttempts }
+
+module.exports = {
+    checkCardBlocked,
+    recordFailedPinAttempt,
+    resetPinAttempts
+}
