@@ -37,11 +37,7 @@ const CheckoutForm = ({ txn_id, onSuccess, onClose }) => {
 
       if (paymentIntent.status === 'succeeded') {
         // Verify payment on backend
-        await axiosClient.post(`/amount/payment/${txn_id}`, {}, {
-          headers: {
-            Authorization: 'Bearer ' + localStorage.getItem('token')
-          }
-        });
+        await axiosClient.post(`/amount/payment/${txn_id}`, {} );
 
         toast.success("Payment Successful!");
         onSuccess();
