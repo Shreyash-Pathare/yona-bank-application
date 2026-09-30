@@ -41,8 +41,7 @@ const router = useRouter()
       
       toast.success(data.msg)
       
-      // token
-      localStorage.setItem("token",data.token)
+    
       
       await fetchUserProfile()
 
