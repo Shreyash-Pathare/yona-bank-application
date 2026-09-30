@@ -33,11 +33,7 @@ export default function AddAccountModal() {
     try {
         setLoading(true)
 
-        const response = await axiosClient.post('/amount/add-account',values,{
-            headers:{
-                'Authorization':'Bearer '+localStorage.getItem("token")
-            }
-        })
+        const response = await axiosClient.post('/amount/add-account',values)
         const data = await response.data 
 
         await fetchUserProfile()
