@@ -45,7 +45,7 @@ const RegisterPage = () => {
     toast.success(data.msg)
 
     // token
-    localStorage.setItem("token",data.token)
+    
     fetchUserProfile()
     router.push("/")
 
