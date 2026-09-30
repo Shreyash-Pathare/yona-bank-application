@@ -7,8 +7,8 @@ class AuthController {
 
         res.cookie("accessToken", res_obj.token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            secure: true,
+            sameSite: "none",
             maxAge: 15 * 60 * 1000
         });
 
@@ -22,8 +22,8 @@ class AuthController {
 
         res.cookie("accessToken", res_obj.token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
+            secure: true,
+            sameSite: "none",
             maxAge: 15 * 60 * 1000
         });
 
@@ -42,8 +42,8 @@ class AuthController {
     static async logoutUser(req, res) {
     res.clearCookie("accessToken", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax"
+        secure: true,
+        sameSite: "none"
     });
 
     res.status(200).send({
