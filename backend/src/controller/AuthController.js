@@ -39,22 +39,18 @@ class AuthController {
     }
 
 
-    const LogoutHandler = async () => {
-    try {
-        await axiosClient.post("/auth/logout");
+    static async logoutUser(req, res) {
+    res.clearCookie("accessToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax"
+    });
 
-        setUser(null);
-        setAtm(null);
+    res.status(200).send({
+        msg: "Logout Successful"
+    });
+}
 
-        toast.success("Logout Successful");
-
-        router.push("/login");
-    } catch (error) {
-        toast.error(
-            error.response?.data?.msg || "Logout failed"
-        );
-    }
-};
 
 }
 
