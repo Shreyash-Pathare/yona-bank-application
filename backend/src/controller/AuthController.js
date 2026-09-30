@@ -37,6 +37,25 @@ class AuthController {
 
         res.status(200).send(res_obj);
     }
+
+
+    const LogoutHandler = async () => {
+    try {
+        await axiosClient.post("/auth/logout");
+
+        setUser(null);
+        setAtm(null);
+
+        toast.success("Logout Successful");
+
+        router.push("/login");
+    } catch (error) {
+        toast.error(
+            error.response?.data?.msg || "Logout failed"
+        );
+    }
+};
+
 }
 
 module.exports = AuthController;
