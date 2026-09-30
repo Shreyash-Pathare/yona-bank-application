@@ -31,11 +31,7 @@ export default function AddNewFdModel({isUpdate,setIsUpdate}) {
     try {
       setLoading(true)
       // req
-      const response = await axiosClient.post('/fd/add-new',values,{
-        headers:{
-          'Authorization':'Bearer '+localStorage.getItem("token")
-        }
-      })
+      const response = await axiosClient.post('/fd/add-new',values)
 
       const data = await response.data
       // console.log(data);
