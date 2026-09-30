@@ -1,21 +1,42 @@
-const AuthService = require("../service/AuthService")
+const AuthService = require("../service/AuthService");
 
-class AuthController{
+class AuthController {
 
-    static async  loginUser(req,res){
-        const res_obj = await AuthService.loginUser(req.body)
-        res.status(200).send(res_obj)
+    static async loginUser(req, res) {
+        const res_obj = await AuthService.loginUser(req.body);
+
+        res.cookie("accessToken", res_obj.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.status(200).send({
+            msg: res_obj.msg
+        });
     }
 
-    static async registerUser(req,res){
-        const res_obj = await AuthService.registerUser(req.body)
-        res.status(201).send(res_obj)
+    static async registerUser(req, res) {
+        const res_obj = await AuthService.registerUser(req.body);
+
+        res.cookie("accessToken", res_obj.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.status(201).send({
+            msg: res_obj.msg
+        });
     }
 
-    static async profileUser(req,res){
+    static async profileUser(req, res) {
         const res_obj = await AuthService.profileUser(req.user);
-        res.status(200).send(res_obj)
-    }
 
+        res.status(200).send(res_obj);
+    }
 }
-module.exports = AuthController
+
+module.exports = AuthController;
