@@ -17,11 +17,7 @@ const FDPage = () => {
     
     try {
       setLoading(true)
-      const response = await axiosClient.get('/fd/get-all',{
-        headers:{
-          'Authorization':'Bearer '+localStorage.getItem("token")
-        }
-      })
+      const response = await axiosClient.get('/fd/get-all')
 
       const data =await response.data 
       setDeposists(data)
