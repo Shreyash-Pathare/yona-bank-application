@@ -78,14 +78,23 @@ const fetchUserProfile = async () => {
   // ===============================
   // Logout Handler
   // ===============================
- const LogoutHandler = () => {
-   // setLoading(true);  // ✅ hides all children, shows Loader instantly
-    localStorage.removeItem("token");
-    setUser(null);
-    setAtm(null);
-    toast.success("Logout Successful");
-    router.push("/login");
+const LogoutHandler = async () => {
+    try {
+        await axiosClient.post("/auth/logout");
+
+        setUser(null);
+        setAtm(null);
+
+        toast.success("Logout Successful");
+
+        router.push("/login");
+    } catch (error) {
+        toast.error(
+            error.response?.data?.msg || "Logout failed"
+        );
+    }
 };
+
   // ===============================
   // Initial Load
   // ===============================
