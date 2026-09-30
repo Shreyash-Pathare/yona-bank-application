@@ -15,11 +15,7 @@ const Transactions = () => {
     setLoading(true)
     try {
       
-      const response = await axiosClient.get('/amount/transactions',{
-        headers:{
-          'Authorization':'Bearer '+ localStorage.getItem("token")
-        }
-      })
+      const response = await axiosClient.get('/amount/transactions')
       const data = await response.data 
       setTransaction(data)
 
