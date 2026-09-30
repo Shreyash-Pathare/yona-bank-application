@@ -27,11 +27,7 @@ const ClaimFDModel = ({id,methods:{isUpdate,setIsUpdate}}) => {
         try {
             setLoading(true)
 
-            const response  = await axiosClient.get(`/fd/get/${id}`,{
-                headers:{
-                    'Authorization':'Bearer ' + localStorage.getItem("token")
-                }
-            })
+            const response  = await axiosClient.get(`/fd/get/${id}`)
             const data = await response.data 
 
             setData(data)
