@@ -18,4 +18,8 @@ router.route("/profile")
 .get(AuthMiddleware,AuthController.profileUser)
 
 
+router.route("/logout")
+.post(AuthController.logoutUser)
+
+
 module.exports = router
