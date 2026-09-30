@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken")
-const jwt_screate = "!@#$%^&*#$%^&*"
+const jwt_screate = process.env.JWT_SECRET
+
 class JWTService{
 
         static generateToken (user){
