@@ -26,32 +26,21 @@ export const MainContextProvider = ({ children }) => {
   // ===============================
   // Fetch User Profile
   // ===============================
-const fetchUserProfile = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    console.log("Token:", token);
+  const fetchUserProfile = async () => {
+    try {
+      const response = await axiosClient.get("/auth/profile");
 
-    if (!token) {
-      console.log("No token found");
+      console.log("Profile response:", response.data);
+
+      setUser(response.data);
+    } catch (error) {
+      console.log("Profile error:", error.response || error);
+
+      setUser(null);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const response = await axiosClient.get("/auth/profile", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    console.log("Profile response:", response.data);
-
-    setUser(response.data);
-  } catch (error) {
-    console.log("Profile error:", error.response || error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // ===============================
   // Fetch ATM Details
@@ -60,14 +49,7 @@ const fetchUserProfile = async () => {
     try {
       if (!id) return;
 
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const response = await axiosClient.get(`/atm/get/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axiosClient.get(`/atm/get/${id}`);
 
       setAtm(response.data);
     } catch (error) {
@@ -78,29 +60,27 @@ const fetchUserProfile = async () => {
   // ===============================
   // Logout Handler
   // ===============================
-const LogoutHandler = async () => {
+  const LogoutHandler = async () => {
     try {
-        await axiosClient.post("/auth/logout");
+      await axiosClient.post("/auth/logout");
 
-        setUser(null);
-        setAtm(null);
+      setUser(null);
+      setAtm(null);
 
-        toast.success("Logout Successful");
+      toast.success("Logout Successful");
 
-        router.push("/login");
+      router.push("/login");
     } catch (error) {
-        toast.error(
-            error.response?.data?.msg || "Logout failed"
-        );
+      toast.error(
+        error.response?.data?.msg || "Logout failed"
+      );
     }
-};
+  };
 
   // ===============================
   // Initial Load
   // ===============================
- 
- 
-   useEffect(() => {
+  useEffect(() => {
     fetchUserProfile();
   }, []);
 
