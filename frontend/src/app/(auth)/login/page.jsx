@@ -76,7 +76,7 @@ const router = useRouter()
 
 </div>
 <div className="mb-3">
-<Field type="text" name='password'  className="w-full py-3 px-3 rounded border outline-none" placeholder="Enter Your Password" />
+<Field type="password" name='password'  className="w-full py-3 px-3 rounded border outline-none" placeholder="Enter Your Password" />
 <ErrorMessage name='password' className='text-red-500' component={'p'} />
 
 </div>
