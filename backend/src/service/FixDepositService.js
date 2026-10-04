@@ -1,155 +1,397 @@
-const { AccountModel } = require("../models/Account.model")
-const { FixDepositModel } = require("../models/FixDeposit.model")
-const { TransactionModel } = require("../models/Transactions.model")
-// import { FixDepositModel } from '../models/FixDeposit.model';
-// import { TransactionModel } from '../models/Transactions.model';
-const { Account_LIMIT } = require("./../utils/constant")
- 
-const ApiError = require("../utils/ApiError")
+const { AccountModel } = require("../models/Account.model");
+const { FixDepositModel } = require("../models/FixDeposit.model");
+const { TransactionModel } = require("../models/Transactions.model");
 
-class FixDepositService{
+const { Account_LIMIT } = require("./../utils/constant");
+const ApiError = require("../utils/ApiError");
 
-    static  async  AddNewFD(body,user){
-        
-        // verify karna hain account exist karta hai ya nhi 
+class FixDepositService {
 
-        const existAccount =await AccountModel.findById(body.account)
-        if(!existAccount){
-            throw new ApiError(404,"Account Not Found")
+    static async AddNewFD(body, user) {
+
+        const account = await AccountModel.findById(body.account);
+
+        if (!account) {
+            throw new ApiError(404, "Account Not Found");
         }
-        //for all fd amount na to jayda ho na hi barabar ho
-        if(parseInt(body.amount) >= existAccount.amount ){
-            throw new ApiError(400,"Insufficient Balanace Please Add Money ")
 
+        const fdAmount = Number(body.amount);
+
+        if (!fdAmount || fdAmount <= 0) {
+            throw new ApiError(400, "Invalid FD Amount");
         }
-        //for current account amount limit se kam or uske barabar nhi hona chaiye 
-        if(existAccount.ac_type === 'current'){
-            if(existAccount.amount <= Account_LIMIT.current){
-                throw new ApiError(400,"Insufficient Balanace ")
+
+        const remainingBalance = account.amount - fdAmount;
+
+        if (remainingBalance < 0) {
+            throw new ApiError(400, "Insufficient Balance");
+        }
+
+        if (
+            account.ac_type === "current" &&
+            remainingBalance < Account_LIMIT.current
+        ) {
+            throw new ApiError(
+                400,
+                `Account must maintain minimum balance of ₹${Account_LIMIT.current}`
+            );
+        }
+
+        const tenureMonths = Number(body.tenure_months);
+
+        if (!tenureMonths || tenureMonths <= 0) {
+            throw new ApiError(400, "Invalid FD Tenure");
+        }
+
+        // Backend decides the interest rate
+        let interestRate;
+
+        if (tenureMonths <= 6) {
+            interestRate = 6;
+        } else if (tenureMonths <= 12) {
+            interestRate = 7;
+        } else if (tenureMonths <= 24) {
+            interestRate = 7.5;
+        } else {
+            interestRate = 8;
+        }
+
+        const startDate = new Date();
+
+        const maturityDate = new Date(startDate);
+
+        maturityDate.setMonth(
+            maturityDate.getMonth() + tenureMonths
+        );
+
+        const tenureYears = tenureMonths / 12;
+
+        const interestAmount =
+            fdAmount *
+            (interestRate / 100) *
+            tenureYears;
+
+        const maturityAmount =
+            fdAmount + interestAmount;
+
+        const fd = await FixDepositModel.create({
+            account: body.account,
+            amount: fdAmount,
+            apply_for: body.apply_for,
+            user,
+
+            date: startDate,
+            maturity_date: maturityDate,
+
+            tenure_months: tenureMonths,
+            interest_rate: interestRate,
+
+            interest_amount: Number(
+                interestAmount.toFixed(2)
+            ),
+
+            maturity_amount: Number(
+                maturityAmount.toFixed(2)
+            ),
+
+            status: "ACTIVE",
+
+            remark: `Fund Deposit ₹${fdAmount}`
+        });
+
+        await TransactionModel.create({
+            account: body.account,
+            amount: fdAmount,
+            isSuccess: true,
+            type: "fix_deposit",
+            user,
+            remark: `Fund Deposit ₹${fdAmount}`
+        });
+
+        await AccountModel.findByIdAndUpdate(
+            account._id,
+            {
+                amount: remainingBalance
+            }
+        );
+
+        return {
+            msg: "Fixed Deposit Created Successfully",
+            fd
+        };
+    }
+
+
+    static async getAllFD(user) {
+
+        const fixDeposits = await FixDepositModel
+            .find({ user })
+            .select(
+                "_id apply_for amount date maturity_date tenure_months interest_rate interest_amount maturity_amount status claimed_date"
+            )
+            .sort({ createdAt: -1 });
+
+        const currentDate = new Date();
+
+        for (const fd of fixDeposits) {
+
+            if (
+                fd.status === "ACTIVE" &&
+                currentDate >= fd.maturity_date
+            ) {
+                fd.status = "MATURED";
+                await fd.save();
             }
         }
 
-        const interest_amount = parseInt(body.amount)*(0.1/100)
+        return fixDeposits;
+    }
 
-        // apply for fd
-        await FixDepositModel.create({
-            account:body.account,
-            amount:parseInt(body.amount),
-            apply_for:body.apply_for,
-            user:user,
-            remark:`Fund Deposit ₹${body.amount}`,
-            interest_amount:interest_amount
-        })
 
-        // add transaction
-        await TransactionModel.create({
-            account:body.account,
-            amount:parseInt(body.amount),
-            isSuccess:true,
-            type:'fix_deposit',
-            user:user,
-            remark:`Fund Deposit ₹${body.amount}`
-        })
+    static async getFDById(user, id) {
 
-        // amount katna hain
-        await AccountModel.findByIdAndUpdate(existAccount._id,{
-            amount:existAccount.amount-parseInt(body.amount)
-        })
+        const foundFD = await FixDepositModel.findOne({
+            user,
+            _id: id
+        });
+
+        if (!foundFD) {
+            throw new ApiError(404, "FD Not Found");
+        }
+
+        const currentDate = new Date();
+
+        if (
+            foundFD.status === "ACTIVE" &&
+            currentDate >= foundFD.maturity_date
+        ) {
+            foundFD.status = "MATURED";
+            await foundFD.save();
+        }
+
+        const depositDate = new Date(foundFD.date);
+
+        const daysPassed = Math.floor(
+            (currentDate - depositDate) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        const currentInterest =
+            foundFD.amount *
+            (foundFD.interest_rate / 100) *
+            (daysPassed / 365);
+
+        const currentValue =
+            foundFD.amount + currentInterest;
 
         return {
-            msg:"Fund Deposit Success "
-        }
+            ...foundFD.toObject(),
 
+            days_passed: daysPassed,
 
+            current_interest: Number(
+                currentInterest.toFixed(2)
+            ),
+
+            current_value: Number(
+                currentValue.toFixed(2)
+            )
+        };
     }
 
-    static async getAllFD(user){
-                
-        const fix_deposits = await FixDepositModel.find({user ,isClaimed:false})
-        .select("_id apply_for amount isClaimed Date")
-        return fix_deposits
 
+    static async ClaimFDById(user, id) {
 
-    }
-
-    static async getFDById(user,id){
-
-        const foundFD =await FixDepositModel.findOne({
+        const foundFD = await FixDepositModel.findOne({
             user,
-            _id:id,
-            isClaimed:false
-        })
-        if(!foundFD){
-            throw new ApiError(404,"FD Not Found")
+            _id: id
+        });
+
+        if (!foundFD) {
+            throw new ApiError(404, "FD Not Found");
         }
 
-        // interest rate nikalna per day ka 
+        if (foundFD.status === "CLAIMED") {
+            throw new ApiError(400, "FD Already Claimed");
+        }
 
-        const interest_amount_per_day = Number(foundFD.amount*(0.1/100))
+        if (foundFD.status === "PREMATURE_CLOSED") {
+            throw new ApiError(
+                400,
+                "FD Was Already Closed Prematurely"
+            );
+        }
 
-        // Calculate number of days since deposit
-const currentDate = new Date();
-const depositDate = new Date(foundFD.date);
-const kitne_din = Math.floor((currentDate - depositDate) / (1000 * 60 * 60 * 24));
-const totalamount = interest_amount_per_day*kitne_din
-        return {...foundFD.toObject(),interest_amount_per_day,totalamount}
+        const currentDate = new Date();
 
+        if (currentDate < foundFD.maturity_date) {
+            throw new ApiError(
+                400,
+                "FD Has Not Matured Yet"
+            );
+        }
+
+        if (foundFD.status === "ACTIVE") {
+            foundFD.status = "MATURED";
+            await foundFD.save();
+        }
+
+        const totalClaimAmount =
+            Number(foundFD.maturity_amount.toFixed(2));
+
+        const account = await AccountModel.findById(
+            foundFD.account
+        );
+
+        if (!account) {
+            throw new ApiError(404, "Account Not Found");
+        }
+
+        await AccountModel.findByIdAndUpdate(
+            account._id,
+            {
+                $inc: {
+                    amount: totalClaimAmount
+                }
+            }
+        );
+
+        await TransactionModel.create({
+            account: foundFD.account,
+            amount: totalClaimAmount,
+            isSuccess: true,
+            type: "fix_deposit",
+            user,
+            remark: `FD Matured and Claimed ₹${totalClaimAmount}`
+        });
+
+        foundFD.status = "CLAIMED";
+        foundFD.claimed_date = currentDate;
+
+        await foundFD.save();
+
+        return {
+            msg: "FD Claimed Successfully",
+            amount: totalClaimAmount
+        };
     }
 
-    static async ClaimFDById(user,id){
 
+    static async PrematureCloseFD(user, id) {
 
-        const foundFD =await FixDepositModel.findOne({
+        const foundFD = await FixDepositModel.findOne({
             user,
-            _id:id,
-            isClaimed:false
-        })
-        if(!foundFD){
-            throw new ApiError(404,"FD Not Found")
+            _id: id
+        });
+
+        if (!foundFD) {
+            throw new ApiError(404, "FD Not Found");
         }
 
-        // interest rate nikalna per day ka 
+        if (foundFD.status === "CLAIMED") {
+            throw new ApiError(
+                400,
+                "FD Already Claimed"
+            );
+        }
 
-        const interest_amount_per_day = Number(foundFD.amount*(0.1/100))
+        if (foundFD.status === "PREMATURE_CLOSED") {
+            throw new ApiError(
+                400,
+                "FD Already Closed"
+            );
+        }
 
-        // Calculate number of days since deposit
-const currentDate = new Date();
-const depositDate = new Date(foundFD.date);
-const kitne_din = Math.floor((currentDate - depositDate) / (1000 * 60 * 60 * 24));
-const totalamount = interest_amount_per_day*kitne_din
+        if (foundFD.status === "MATURED") {
+            throw new ApiError(
+                400,
+                "FD Has Already Matured. Please Claim It."
+            );
+        }
 
-const totalClaimAmount = foundFD.amount + totalamount
+        const currentDate = new Date();
 
- // add transaction
- await TransactionModel.create({
-    account:foundFD.account,
-    amount:parseFloat(totalClaimAmount),
-    isSuccess:true,
-    type:'fix_deposit',
-    user:user,
-    remark:`Fund Claimed ₹${totalClaimAmount}`
-})
+        const depositDate = new Date(foundFD.date);
 
+        const daysPassed = Math.floor(
+            (currentDate - depositDate) /
+            (1000 * 60 * 60 * 24)
+        );
 
-const existAccount =await AccountModel.findById(foundFD.account)
- 
+        if (daysPassed <= 0) {
+            throw new ApiError(
+                400,
+                "FD Cannot Be Closed Immediately"
+            );
+        }
 
-await AccountModel.findByIdAndUpdate(existAccount._id,{
-    amount:existAccount.amount+parseFloat(totalClaimAmount)
-})
+        const interestAmount =
+            foundFD.amount *
+            (foundFD.interest_rate / 100) *
+            (daysPassed / 365);
 
-await FixDepositModel.findByIdAndUpdate( id,{
-    isClaimed:true,
-    claimed_date:Date.now()
-})
+        const penaltyRate = 1;
 
-return {
-    msg:"FD Claimed :)"
+        const penalty =
+            interestAmount *
+            (penaltyRate / 100);
+
+        const payout =
+            foundFD.amount +
+            interestAmount -
+            penalty;
+
+        const account = await AccountModel.findById(
+            foundFD.account
+        );
+
+        if (!account) {
+            throw new ApiError(404, "Account Not Found");
+        }
+
+        await AccountModel.findByIdAndUpdate(
+            account._id,
+            {
+                $inc: {
+                    amount: Number(payout.toFixed(2))
+                }
+            }
+        );
+
+        await TransactionModel.create({
+            account: foundFD.account,
+            amount: Number(payout.toFixed(2)),
+            isSuccess: true,
+            type: "fix_deposit",
+            user,
+            remark: `FD Prematurely Closed ₹${payout.toFixed(2)}`
+        });
+
+        foundFD.status = "PREMATURE_CLOSED";
+        foundFD.premature_closed_date = currentDate;
+        foundFD.premature_penalty = Number(
+            penalty.toFixed(2)
+        );
+        foundFD.interest_amount = Number(
+            interestAmount.toFixed(2)
+        );
+
+        await foundFD.save();
+
+        return {
+            msg: "FD Prematurely Closed Successfully",
+            principal: foundFD.amount,
+            interest: Number(
+                interestAmount.toFixed(2)
+            ),
+            penalty: Number(
+                penalty.toFixed(2)
+            ),
+            payout: Number(
+                payout.toFixed(2)
+            )
+        };
+    }
 }
 
-    }
-}
-
-
-
-module.exports = FixDepositService
+module.exports = FixDepositService;
