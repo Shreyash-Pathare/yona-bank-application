@@ -1,124 +1,206 @@
-const { UserModel } = require("../models/User.model")
-const ApiError = require("../utils/ApiError")
-const bcryptjs = require("bcryptjs")
-const JWTService = require("../utils/JwtService")
-const { AccountModel } = require("../models/Account.model")
-const { TransactionModel } = require("../models/Transactions.model")
-const { FixDepositModel } = require("../models/FixDeposit.model")
-const { ATMmodel } = require("../models/ATMCard.model")
+
+const { UserModel } = require("../models/User.model");
+const ApiError = require("../utils/ApiError");
+const bcryptjs = require("bcryptjs");
+const JWTService = require("../utils/JwtService");
+
+const { AccountModel } = require("../models/Account.model");
+const { TransactionModel } = require("../models/Transactions.model");
+const { FixDepositModel } = require("../models/FixDeposit.model");
+const { ATMmodel } = require("../models/ATMCard.model");
 
 
 class AuthService {
 
     static async loginUser(body) {
-        const { email, password } = body
 
-        const check_exist = await UserModel.findOne({ email: email.toLowerCase() })
+        const { email, password } = body;
+
+        const check_exist = await UserModel.findOne({
+            email: email.toLowerCase()
+        });
+
         if (!check_exist) {
-            throw new ApiError(400, "No Account Found")
+            throw new ApiError(
+                400,
+                "No Account Found"
+            );
         }
 
-        const isMatch = await bcryptjs.compare(password, check_exist.password)
+        const isMatch = await bcryptjs.compare(
+            password,
+            check_exist.password
+        );
+
         if (!isMatch) {
-            throw new ApiError(400, "Invalid Credentials")
+            throw new ApiError(
+                400,
+                "Invalid Credentials"
+            );
         }
 
-        const token = JWTService.generateToken(check_exist._id)
+        const token = JWTService.generateToken(
+            check_exist._id
+        );
 
         return {
             msg: "Login Success",
-            token: token
-        }
+            token
+        };
     }
 
 
     static async registerUser(body) {
-        const { name, email, password, ac_type } = body
 
-        const normalizedEmail = email.toLowerCase()
+        const {
+            name,
+            email,
+            password,
+            ac_type
+        } = body;
 
-        const check_exist = await UserModel.findOne({ email: normalizedEmail })
+        const normalizedEmail =
+            email.toLowerCase();
+
+        const check_exist = await UserModel.findOne({
+            email: normalizedEmail
+        });
+
         if (check_exist) {
-            throw new ApiError(400, "Email Already Exist")
+            throw new ApiError(
+                400,
+                "Email Already Exist"
+            );
         }
 
-        // ✅ Removed manual hashing - model pre-save hook handles it
         const user = await UserModel.create({
             name,
             email: normalizedEmail,
-            password: password, // plain text - will be hashed by model
+            password,
             ac_type
-        })
+        });
 
         const ac = await AccountModel.create({
             user: user._id,
             amount: 0,
-            ac_type: ac_type
-        })
+            ac_type
+        });
 
         await TransactionModel.create({
             user: user._id,
             account: ac._id,
             amount: 0,
-            type: 'credit',
+            type: "credit",
             isSuccess: true,
-            remark: 'Account Opening !'
-        })
+            remark: "Account Opening !"
+        });
 
-        const token = JWTService.generateToken(user._id)
+        const token =
+            JWTService.generateToken(user._id);
 
         return {
             msg: "Register Success",
-            token: token
-        }
+            token
+        };
     }
 
 
     static async profileUser(user) {
 
-        const userd = await UserModel.findById(user)
-            .select("name email ac_type createdAt -_id")
+        const userd = await UserModel
+            .findById(user)
+            .select(
+                "name email ac_type createdAt -_id"
+            );
+
         if (!userd) {
-            throw new ApiError(401, "Profile Not Found")
+            throw new ApiError(
+                401,
+                "Profile Not Found"
+            );
         }
 
-        const profile_obj = {}
+        const [
+            accounts,
+            fixDeposits,
+            atms
+        ] = await Promise.all([
 
-        const [account, fixDeposits, atms] = await Promise.all([
-            AccountModel.find({ user }).select("_id amount"),
-            FixDepositModel.find({ user, isClaimed: false }),
-            ATMmodel.find({ user }).select("_id card_type")
-        ])
+            AccountModel
+                .find({ user })
+                .select("_id amount ac_type"),
 
-        if (account.length === 0) {
+            FixDepositModel
+                .find({
+                    user,
+                    status: {
+                        $nin: [
+                            "CLAIMED",
+                            "PREMATURE_CLOSED"
+                        ]
+                    }
+                })
+                .select(
+                    "_id account apply_for amount date maturity_date tenure_months interest_rate interest_amount maturity_amount status"
+                )
+                .sort({
+                    createdAt: -1
+                }),
+
+            ATMmodel
+                .find({ user })
+                .select("_id card_type")
+        ]);
+
+
+        let account_no = accounts;
+
+
+        if (accounts.length === 0) {
+
             const ac = await AccountModel.create({
                 user,
                 amount: 0
-            })
+            });
 
             await TransactionModel.create({
                 account: ac._id,
                 amount: 0,
-                type: 'credit',
+                type: "credit",
                 isSuccess: true,
-                remark: 'Account Opening !',
-                user: user,
-            })
+                remark: "Account Opening !",
+                user
+            });
 
-            profile_obj['account_no'] = [{
+            account_no = [{
                 _id: ac._id,
-                amount: ac.amount
-            }]
-        } else {
-            profile_obj['account_no'] = account
+                amount: ac.amount,
+                ac_type: ac.ac_type
+            }];
         }
 
-        profile_obj['fd_amount'] = fixDeposits.length > 0
-            ? fixDeposits.reduce((pre, cur) => pre + cur.amount, 0)
-            : 0
 
-        return { ...userd.toObject(), ...profile_obj, atms }
+        const fd_amount = fixDeposits.length > 0
+            ? fixDeposits.reduce(
+                (total, fd) => total + fd.amount,
+                0
+            )
+            : 0;
+
+
+        return {
+            ...userd.toObject(),
+
+            account_no,
+
+            fd_amount,
+
+            fds: fixDeposits,
+
+            atms
+        };
     }
 }
 
-module.exports = AuthService
+
+module.exports = AuthService;
