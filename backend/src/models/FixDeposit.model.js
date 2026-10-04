@@ -63,23 +63,13 @@ const Schema = new mongoose.Schema(
             enum: [
                 "ACTIVE",
                 "MATURED",
-                "CLAIMED",
-                "PREMATURE_CLOSED"
+                "CLAIMED"
             ],
             default: "ACTIVE"
         },
 
         claimed_date: {
             type: Date
-        },
-
-        premature_closed_date: {
-            type: Date
-        },
-
-        premature_penalty: {
-            type: Number,
-            default: 0
         },
 
         remark: {
