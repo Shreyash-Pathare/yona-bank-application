@@ -3,7 +3,7 @@ const { AccountModel } = require("../models/Account.model");
 const { ATMmodel } = require("../models/ATMCard.model");
 const { UserModel } = require("../models/User.model");
 const ApiError = require("../utils/ApiError");
-const { default: random } = require("random-int");
+const random = require("random-int");
 const {
     Account_LIMIT,
     CARD_TYPE
