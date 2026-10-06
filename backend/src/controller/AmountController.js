@@ -21,6 +21,13 @@ class AmountController {
         const res_obj = await AmountService.addNewAccount(req.user, req.body)
         res.status(201).send(res_obj)
     }
+
+    static transferMoney = async (req, res) => {
+
+        const res_obj = await AmountService.transferMoney(req.body,req.user);
+
+        res.status(200).send(res_obj);
+    };
 }
 
 module.exports = AmountController
