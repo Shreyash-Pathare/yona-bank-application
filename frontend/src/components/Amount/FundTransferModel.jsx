@@ -69,19 +69,11 @@ export default function FundTransferModel({ accountNumber }) {
       setLoading(true);
 
 
-      const response = await axiosClient.post(
-        "/amount/transfer",
+      const response = await axiosClient.post( "/amount/transfer",
         {
           from_account: accountNumber,
           to_account: receiverAccount,
           amount: parseInt(amount)
-        },
-        {
-          headers: {
-            Authorization:
-              "Bearer " +
-              localStorage.getItem("token")
-          }
         }
       );
 
