@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const crypto = require("crypto");
 const { AccountModel } = require("../models/Account.model");
 const { TransactionModel } = require("../models/Transactions.model");
 const { UserModel } = require("../models/User.model");
@@ -222,12 +222,18 @@ class AmountService {
                         "User Not Found"
                     );
                 }
-
+                function generateAccountNumber() {
+                
+                    return crypto.randomInt(1000000000, 10000000000).toString();
+                 }
+                const accountNumber = generateAccountNumber();
+               
                 const [ac] =
                     await AccountModel.create(
                         [
                             {
                                 user,
+                                accountNumber,
                                 ac_type: body.ac_type,
                                 amount: 0
                             }
