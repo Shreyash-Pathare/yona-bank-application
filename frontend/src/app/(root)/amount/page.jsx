@@ -46,7 +46,7 @@ const Card =({cur})=>{
   return  <div className="card w-full border py-5 rounded flex items-center justify-between px-3">
   <div className="flex flex-col">
   <h1 className='text-2xl font-bold'>Add Amount</h1>
-  <p className='text-lg text-zinc-500 font-medium'> {cur._id}</p>
+  <p className='text-lg text-zinc-500 font-medium'> {cur.accountNumber}</p>
    <div className='text-2xl text-start w-full font-bold text-zinc-950 flex items-center gap-x-2 justify-start'> <span>Total Amount &#8377; {isShow ? cur.amount: ``.padStart(`${cur.amount}`.length,'x')}/-</span> <button
                   onClick={(e)=>{
                       e.preventDefault()
