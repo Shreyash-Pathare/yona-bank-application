@@ -6,7 +6,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment, useState } from 'react';
 import { CiSquarePlus } from "react-icons/ci";
 import { IoClose } from "react-icons/io5";
-import { RiMoneyRupeeCircleLine, RiExchangeFundsLine } from "react-icons/ri";
+import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { toast } from 'react-toastify';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -16,20 +16,20 @@ import {
   useElements
 } from '@stripe/react-stripe-js';
 
-// Fund Transfer Component
-import FundTransferModel from './FundTransferModel';
-
-
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 );
 
 
-// ===============================
+// =====================================
 // Stripe Payment Form
-// ===============================
+// =====================================
 
-const CheckoutForm = ({ txn_id, onSuccess, onClose }) => {
+const CheckoutForm = ({
+  txn_id,
+  onSuccess,
+  onClose
+}) => {
 
   const stripe = useStripe();
   const elements = useElements();
@@ -47,11 +47,13 @@ const CheckoutForm = ({ txn_id, onSuccess, onClose }) => {
 
       setLoading(true);
 
-      const { error, paymentIntent } =
-        await stripe.confirmPayment({
-          elements,
-          redirect: 'if_required',
-        });
+      const {
+        error,
+        paymentIntent
+      } = await stripe.confirmPayment({
+        elements,
+        redirect: 'if_required',
+      });
 
 
       if (error) {
@@ -71,12 +73,15 @@ const CheckoutForm = ({ txn_id, onSuccess, onClose }) => {
         );
 
 
-        toast.success("Payment Successful!");
+        toast.success(
+          "Payment Successful!"
+        );
 
         onSuccess();
 
         onClose();
       }
+
 
     } catch (error) {
 
@@ -93,7 +98,6 @@ const CheckoutForm = ({ txn_id, onSuccess, onClose }) => {
 
 
   return (
-
     <form
       onSubmit={handleSubmit}
       className="w-[96%] lg:w-[80%] mx-auto"
@@ -121,9 +125,10 @@ const CheckoutForm = ({ txn_id, onSuccess, onClose }) => {
         "
       >
 
-        {loading
-          ? 'Processing...'
-          : 'Pay Now'
+        {
+          loading
+            ? 'Processing...'
+            : 'Pay Now'
         }
 
       </button>
@@ -133,9 +138,10 @@ const CheckoutForm = ({ txn_id, onSuccess, onClose }) => {
 };
 
 
-// ===============================
-// Main Add Amount Modal
-// ===============================
+
+// =====================================
+// Add Amount Modal
+// =====================================
 
 export default function AddAmountModel({ id }) {
 
@@ -143,25 +149,21 @@ export default function AddAmountModel({ id }) {
     fetchUserProfile
   } = useMainContext();
 
-
   let [isOpen, setIsOpen] = useState(false);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [clientSecret, setClientSecret] =
     useState(null);
 
-  const [txnId, setTxnId] =
-    useState(null);
+  const [txnId, setTxnId] = useState(null);
 
-  const [amount, setAmount] =
-    useState('');
+  const [amount, setAmount] = useState('');
 
 
-  // ===============================
+  // =====================================
   // Close Modal
-  // ===============================
+  // =====================================
 
   function closeModal() {
 
@@ -173,9 +175,9 @@ export default function AddAmountModel({ id }) {
   }
 
 
-  // ===============================
+  // =====================================
   // Open Modal
-  // ===============================
+  // =====================================
 
   function openModal() {
 
@@ -183,16 +185,13 @@ export default function AddAmountModel({ id }) {
   }
 
 
-  // ===============================
-  // Create Stripe Payment
-  // ===============================
+  // =====================================
+  // Create Payment
+  // =====================================
 
   const handleCreatePayment = async () => {
 
-    if (
-      !amount ||
-      parseInt(amount) < 1
-    ) {
+    if (!amount || parseInt(amount) < 1) {
 
       toast.error(
         "Enter a valid amount"
@@ -206,7 +205,6 @@ export default function AddAmountModel({ id }) {
 
       setLoading(true);
 
-
       const response =
         await axiosClient.post(
           '/amount/add-money',
@@ -217,7 +215,6 @@ export default function AddAmountModel({ id }) {
           },
           {
             headers: {
-
               Authorization:
                 'Bearer ' +
                 localStorage.getItem('token')
@@ -250,46 +247,30 @@ export default function AddAmountModel({ id }) {
 
 
   return (
-
     <>
 
-      {/* =============================== */}
-      {/* Account Action Buttons */}
-      {/* =============================== */}
+      {/* ================================= */}
+      {/* Add Amount Button */}
+      {/* ================================= */}
 
-      <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={openModal}
+        className="
+          text-3xl
+          text-rose-700
+          cursor-pointer
+        "
+      >
 
-        {/* Add Money */}
+        <CiSquarePlus />
 
-        <button
-          type="button"
-          onClick={openModal}
-          className="
-            text-3xl
-            text-rose-700
-            hover:text-rose-800
-            cursor-pointer
-          "
-          title="Add Money"
-        >
-
-          <CiSquarePlus />
-
-        </button>
+      </button>
 
 
-        {/* Fund Transfer */}
-
-        <FundTransferModel
-          accountNumber={id}
-        />
-
-      </div>
-
-
-      {/* =============================== */}
-      {/* Add Money Modal */}
-      {/* =============================== */}
+      {/* ================================= */}
+      {/* Add Amount Modal */}
+      {/* ================================= */}
 
       <Transition
         appear
@@ -303,7 +284,6 @@ export default function AddAmountModel({ id }) {
           onClose={closeModal}
         >
 
-          {/* Overlay */}
 
           <Transition.Child
             as={Fragment}
@@ -322,15 +302,16 @@ export default function AddAmountModel({ id }) {
 
           <div className="fixed inset-0 overflow-y-auto">
 
-            <div className="
-              flex
-              min-h-[50vh]
-              items-center
-              justify-center
-              p-4
-              text-center
-            ">
-
+            <div
+              className="
+                flex
+                min-h-[50vh]
+                items-center
+                justify-center
+                p-4
+                text-center
+              "
+            >
 
               <Transition.Child
                 as={Fragment}
@@ -357,9 +338,6 @@ export default function AddAmountModel({ id }) {
                     transition-all
                   "
                 >
-
-
-                  {/* Header */}
 
                   <Dialog.Title
                     as="h3"
@@ -419,9 +397,7 @@ export default function AddAmountModel({ id }) {
                   </div>
 
 
-                  {/* =============================== */}
-                  {/* Step 1 - Amount */}
-                  {/* =============================== */}
+                  {/* Step 1 - Enter Amount */}
 
                   {!clientSecret && (
 
@@ -455,11 +431,10 @@ export default function AddAmountModel({ id }) {
                           value={amount}
                           onChange={(e) =>
                             setAmount(
-                              e.target.value
-                                .replace(
-                                  /[^0-9]/g,
-                                  ''
-                                )
+                              e.target.value.replace(
+                                /[^0-9]/g,
+                                ''
+                              )
                             )
                           }
                           className="
@@ -500,21 +475,19 @@ export default function AddAmountModel({ id }) {
                         "
                       >
 
-                        {loading
-                          ? 'Please wait...'
-                          : 'Proceed to Pay'
+                        {
+                          loading
+                            ? 'Please wait...'
+                            : 'Proceed to Pay'
                         }
 
                       </button>
 
                     </div>
-
                   )}
 
 
-                  {/* =============================== */}
-                  {/* Step 2 - Stripe */}
-                  {/* =============================== */}
+                  {/* Step 2 - Stripe Payment Element */}
 
                   {clientSecret && (
 
@@ -530,11 +503,12 @@ export default function AddAmountModel({ id }) {
                         onSuccess={
                           fetchUserProfile
                         }
-                        onClose={closeModal}
+                        onClose={
+                          closeModal
+                        }
                       />
 
                     </Elements>
-
                   )}
 
                 </Dialog.Panel>
@@ -550,6 +524,5 @@ export default function AddAmountModel({ id }) {
       </Transition>
 
     </>
-
   );
 }
