@@ -6,6 +6,12 @@ const Schema = new mongoose.Schema({
                 ref:'user',
                 required:true
             },
+            
+          accountNumber: {
+               type: String,
+               required: true,
+               unique: true
+          },
             amount:{
                 type:Number,
                 default:0
