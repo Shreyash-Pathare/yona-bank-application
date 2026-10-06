@@ -165,9 +165,11 @@ class AuthService {
 
 
         if (accounts.length === 0) {
-
+            const accountNumber = crypto.randomInt(1000000000, 10000000000).toString();
+            
             const ac = await AccountModel.create({
                 user,
+                accountNumber,
                 amount: 0
             });
 
