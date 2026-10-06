@@ -3,7 +3,7 @@ const { UserModel } = require("../models/User.model");
 const ApiError = require("../utils/ApiError");
 const bcryptjs = require("bcryptjs");
 const JWTService = require("../utils/JwtService");
-
+const crypto = require("crypto");
 const { AccountModel } = require("../models/Account.model");
 const { TransactionModel } = require("../models/Transactions.model");
 const { FixDepositModel } = require("../models/FixDeposit.model");
@@ -80,8 +80,16 @@ class AuthService {
             ac_type
         });
 
+
+        function generateAccountNumber() {
+     
+            return crypto.randomInt(1000000000, 10000000000).toString();
+        } 
+        const accountNumber = generateAccountNumber();
+        
         const ac = await AccountModel.create({
             user: user._id,
+            accountNumber,
             amount: 0,
             ac_type
         });
