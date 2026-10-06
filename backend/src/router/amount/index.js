@@ -9,6 +9,7 @@ const router = express.Router()
 router.post('/add-money',AuthMiddleware,AmountValidation.addMoney,ValidationMiddleware,AmountController.addMoney)
 
 router.post('/add-account',AuthMiddleware,AmountValidation.addAccount,ValidationMiddleware,AmountController.addNewAccount)
+router.post('/transfer',AuthMiddleware,AmountController.transferMoney)
 
 router.post('/payment/:txn_id',AmountController.verifyPayment)
 router.get('/transactions',AuthMiddleware,AmountController.getAllTransactions)
