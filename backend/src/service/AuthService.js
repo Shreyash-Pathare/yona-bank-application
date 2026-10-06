@@ -136,7 +136,7 @@ class AuthService {
 
             AccountModel
                 .find({ user })
-                .select("_id amount ac_type"),
+                .select("_id amount accountNumber ac_type"),
 
             FixDepositModel
                 .find({
